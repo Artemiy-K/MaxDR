@@ -1,0 +1,435 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================
+   БАЗОВЫЕ ЭФФЕКТЫ (SHAKE / FLICKER)
+   =========================== */
+
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+.glitch {
+  animation: glitch 0.2s infinite;
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* ===========================
+   ГЛИТЧ ДЛЯ КОНТЕЙНЕРОВ (VHS-ЭФФЕКТ)
+   =========================== */
+
+/*
+   Используй так:
+   <div className="glitch glitch-vhs">
+     <div className="glitch-offset">контент</div>
+   </div>
+*/
+
+.glitch-vhs {
+  animation: glitch-skew 1.5s infinite linear alternate-reverse;
+  isolation: isolate;
+}
+
+.glitch-vhs::before,
+.glitch-vhs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.12;
+  z-index: 2;
+}
+
+/* синий смещённый слой */
+.glitch-vhs::before {
+  transform: translateX(2px);
+  filter: drop-shadow(-2px 0 #00f);
+  background: linear-gradient(
+    transparent 40%,
+    rgba(0, 120, 255, 0.06) 41%,
+    transparent 42%
+  );
+  animation: glitch-vhs-clip-1 2s infinite linear;
+}
+
+/* красный смещённый слой */
+.glitch-vhs::after {
+  transform: translateX(-2px);
+  filter: drop-shadow(2px 0 #f00);
+  background: linear-gradient(
+    transparent 30%,
+    rgba(255, 40, 40, 0.06) 31%,
+    transparent 32%
+  );
+  animation: glitch-vhs-clip-2 1.8s infinite linear;
+}
+
+/* контент поверх артефактов */
+.glitch-vhs .glitch-offset {
+  position: relative;
+  z-index: 3;
+}
+
+/* ===========================
+   VHS-КЛИППИНГ (РВАНЫЕ ПОЛОСЫ)
+   =========================== */
+
+@keyframes glitch-vhs-clip-1 {
+  0% {
+    clip-path: inset(0% 0 80% 0);
+    opacity: 0.12;
+  }
+  20% {
+    clip-path: inset(30% 0 40% 0);
+    opacity: 0.08;
+  }
+  40% {
+    clip-path: inset(10% 0 60% 0);
+    opacity: 0.14;
+  }
+  60% {
+    clip-path: inset(60% 0 10% 0);
+    opacity: 0.06;
+  }
+  80% {
+    clip-path: inset(20% 0 50% 0);
+    opacity: 0.12;
+  }
+  100% {
+    clip-path: inset(0% 0 0% 0);
+    opacity: 0;
+  }
+}
+
+@keyframes glitch-vhs-clip-2 {
+  0% {
+    clip-path: inset(60% 0 0% 0);
+    opacity: 0.12;
+  }
+  20% {
+    clip-path: inset(10% 0 70% 0);
+    opacity: 0.06;
+  }
+  40% {
+    clip-path: inset(40% 0 30% 0);
+    opacity: 0.14;
+  }
+  60% {
+    clip-path: inset(20% 0 40% 0);
+    opacity: 0.08;
+  }
+  80% {
+    clip-path: inset(80% 0 5% 0);
+    opacity: 0.12;
+  }
+  100% {
+    clip-path: inset(0% 0 0% 0);
+    opacity: 0;
+  }
+}
+
+/* ===========================
+   SKew для VHS-атмосферы
+   =========================== */
+
+@keyframes glitch-skew {
+  0% {
+    transform: skew(0deg);
+  }
+  100% {
+    transform: skew(2deg);
+  }
+}
+
+/* ===========================
+   ГЛИТЧ ТЕКСТА (UI-BTN)
+   =========================== */
+
+.ui-btn span {
+  position: relative;
+  display: inline-block;
+  color: var(--default-btn-color);
+  animation: glitch-skew 1.5s infinite linear alternate-reverse;
+}
+
+.ui-btn span::before,
+.ui-btn span::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0);
+  pointer-events: none;
+}
+
+.ui-btn span::before {
+  left: 2px;
+  text-shadow: -2px 0 #00f;
+  animation: glitch-anim 2s infinite linear alternate-reverse;
+}
+
+.ui-btn span::after {
+  left: -2px;
+  text-shadow: -2px 0 #f00;
+  animation: glitch-anim2 1.8s infinite linear alternate-reverse;
+}
+
+/* Основная анимация текста */
+@keyframes glitch-anim {
+  0% {
+    clip: rect(10px, 9999px, 40px, 0);
+    transform: skew(0.5deg);
+  }
+  20% {
+    clip: rect(50px, 9999px, 90px, 0);
+    transform: skew(1deg);
+  }
+  40% {
+    clip: rect(20px, 9999px, 60px, 0);
+    transform: skew(-1deg);
+  }
+  60% {
+    clip: rect(70px, 9999px, 100px, 0);
+    transform: skew(0.2deg);
+  }
+  80% {
+    clip: rect(30px, 9999px, 80px, 0);
+    transform: skew(-0.5deg);
+  }
+  100% {
+    clip: rect(0px, 9999px, 50px, 0);
+    transform: skew(0deg);
+  }
+}
+
+@keyframes glitch-anim2 {
+  0% {
+    clip: rect(60px, 9999px, 100px, 0);
+    transform: skew(-1deg);
+  }
+  20% {
+    clip: rect(20px, 9999px, 60px, 0);
+    transform: skew(0.5deg);
+  }
+  40% {
+    clip: rect(40px, 9999px, 80px, 0);
+    transform: skew(1deg);
+  }
+  60% {
+    clip: rect(10px, 9999px, 40px, 0);
+    transform: skew(-0.2deg);
+  }
+  80% {
+    clip: rect(50px, 9999px, 90px, 0);
+    transform: skew(0.8deg);
+  }
+  100% {
+    clip: rect(0px, 9999px, 30px, 0);
+    transform: skew(0deg);
+  }
+}
+
+.ui-span {
+  --btn-default-bg: transparent;
+  --btn-padding: 15px 20px;
+  --btn-hover-bg: #000000;
+  --btn-transition: 0.3s;
+  --btn-letter-spacing: 0.1rem;
+  --btn-animation-duration: 1.2s;
+  --btn-shadow-color: #000000;
+  --btn-shadow: 0px 0px 15px 15px var(--btn-shadow-color);
+  --font-size: 28px;
+  /* 👆 this field should not be empty */
+  --font-weight: 700;
+  border-radius: 15px;
+  /* 👆 this field should not be empty */
+}
+
+/* button settings 👆 */
+
+.ui-span {
+  box-sizing: border-box;
+  padding: var(--btn-padding);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--default-btn-color);
+  font: var(--font-weight) var(--font-size) var(--font-family);
+  background: var(--btn-default-bg);
+  cursor: pointer;
+  transition: var(--btn-transition);
+  overflow: hidden;
+  background: var(--btn-hover-bg);
+}
+
+.ui-span span {
+  letter-spacing: var(--btn-letter-spacing);
+  transition: var(--btn-transition);
+  box-sizing: border-box;
+  position: relative;
+  background: inherit;
+}
+
+.ui-span span::before {
+  box-sizing: border-box;
+  position: absolute;
+  content: "";
+  background: inherit;
+}
+
+.ui-span span::before {
+  color: #ff0000;
+  animation: chitchat infinite both var(--btn-animation-duration);
+}
+
+@keyframes chitchat {
+  0% {
+    content: "^=";
+  }
+
+  5% {
+    content: ".f[41";
+  }
+
+  10% {
+    content: "^{:0#";
+  }
+
+  15% {
+    content: "-4@%!";
+  }
+
+  20% {
+    content: "#$_3$";
+  }
+
+  25% {
+    content: "№:0#$";
+  }
+
+  30% {
+    content: "#{+.№:";
+  }
+  35% {
+    content: "@}-?}-";
+  }
+
+  40% {
+    content: "?{4@%,^!";
+  }
+
+  45% {
+    content: "=.,^!{4?{|{f[41$";
+  }
+
+  50% {
+    content: "?2@%:0|{f[41$";
+  }
+
+  55% {
+    content: "\;1+:}]|{f[41$";
+  }
+
+  60% {
+    content: "?{%:%}]";
+  }
+
+  65% {
+    content: "|{f[41$%";
+  }
+
+  70% {
+    content: "{4%0%?{%";
+    right: 0;
+  }
+
+  75% {
+    content: "'|{f[41_0<|{f[41$";
+    right: 0;
+  }
+
+  80% {
+    content: "{0f[%";
+    right: 0;
+  }
+
+  85% {
+    content: "]>'";
+    right: 0;
+  }
+
+  90% {
+    content: "4";
+    right: 0;
+  }
+
+  95% {
+    content: "2";
+    right: 0;
+  }
+
+  100% {
+    content: "";
+    right: 0;
+  }
+}
+
+@keyframes flashColor {
+  0% {
+    background: black;
+  }
+  20% {
+    background: #00ff66;
+  }
+  40% {
+    background: #ff00ff;
+  }
+  60% {
+    background: #00ffff;
+  }
+  80% {
+    background: #ffffff;
+  }
+  100% {
+    background: black;
+  }
+}
+
+.animate-flash {
+  animation: flashColor 0.6s linear forwards;
+}
