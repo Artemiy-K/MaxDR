@@ -5,8 +5,8 @@ import HomePage from "./components/HomePage";
 
 function App() {
   const [stage, setStage] = useState<
-    "start" | "loading" | "FirstVersionWebsite"
-  >("FirstVersionWebsite");
+    "start" | "loading" | "FirstVersionWebsite" | ""
+  >("start");
   const setStageLoading = useCallback(() => {
     setStage("loading");
   }, [setStage]);

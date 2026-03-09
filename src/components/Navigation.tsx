@@ -1,87 +1,71 @@
-import { GlitchText } from "./GlitchText";
+﻿import { GlitchText } from "./GlitchText";
+
+export type TabId = 1 | 2 | 3 | 4 | 5 | 6;
 
 type Props = {
-  activeTab: number;
-  setActiveTab: (n: number) => void;
+  activeTab: TabId;
+  setActiveTab: (n: TabId) => void;
+  unlockedTabs: Record<TabId, boolean>;
   money: number;
   flashlight: boolean;
-  buyFlashlight: () => void;
+};
+
+const labels: Record<TabId, string> = {
+  1: "Вкладка 1",
+  2: "Вкладка 2",
+  3: "Вкладка 3 (Казино)",
+  4: "Вкладка 4",
+  5: "Вкладка 5",
+  6: "Шаурмист",
+};
+
+const lockedSymbols: Record<TabId, string> = {
+  1: "",
+  2: "",
+  3: "Ж©С®О”ГР–в€‘Й…",
+  4: "О¦С®в±®О”ГОЁЙЋ",
+  5: "ГћОЈТњГЖ©",
+  6: "ЉЖ®ФґОє∑",
 };
 
 export default function Navigation({
   activeTab,
   setActiveTab,
+  unlockedTabs,
   money,
   flashlight,
-  buyFlashlight,
 }: Props) {
   return (
-    <div className="w-64 p-6 shadow-xl bg-white relative z-10">
-      {/* Рабочие вкладки */}
-      <button
-        onClick={() => setActiveTab(0)}
-        className={`w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md ${
-          activeTab === 0 ? "ring-2 ring-black" : ""
-        }`}
-      >
-        Старт
-      </button>
+    <div className="w-72 p-6 shadow-xl bg-white relative z-20 overflow-y-auto">
+      {([1, 2, 3, 4, 5, 6] as TabId[]).map((tabId) => {
+        const unlocked = unlockedTabs[tabId];
+        const isActive = activeTab === tabId;
 
-      <button
-        onClick={() => setActiveTab(1)}
-        className={`w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md ${
-          activeTab === 1 ? "ring-2 ring-black" : ""
-        }`}
-      >
-        Вкладка 1
-      </button>
-
-      <button
-        onClick={() => setActiveTab(2)}
-        className={`w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md ${
-          activeTab === 2 ? "ring-2 ring-black" : ""
-        }`}
-      >
-        Вкладка 2
-      </button>
-
-      {/* Сломанные вкладки */}
-      <button>
-        <span className="font-black text-xl tracking-widest">
+        return (
           <button
-            className={`w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md `}
+            key={tabId}
+            onClick={() => unlocked && setActiveTab(tabId)}
+            disabled={!unlocked}
+            className={`w-full text-left px-4 py-3 mb-3 rounded-lg shadow-md transition-colors ${
+              isActive ? "ring-2 ring-black" : ""
+            } ${
+              unlocked
+                ? "bg-white hover:bg-neutral-100"
+                : "bg-neutral-200 text-neutral-500 cursor-not-allowed"
+            }`}
           >
-            ƩѮΔØЖ∑ɅҨ Ɣ
+            {unlocked ? (
+              labels[tabId]
+            ) : (
+              <GlitchText text={lockedSymbols[tabId]} speed={180} intensity={0.2} />
+            )}
           </button>
-        </span>
-      </button>
+        );
+      })}
 
-      <button className="w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md cursor-not-allowed">
-        <GlitchText text="ΞɊѺÞΣҜØƩ ÞΣ" speed={200} />
-      </button>
-
-      <button>
-        <span className="font-black text-xl tracking-widest">
-          <button
-            className={`w-full text-left px-4 py-3 mb-3 rounded-lg bg-white shadow-md `}
-          >
-            ΦѮⱮΔØΨɎЖ Ɐ
-          </button>
-        </span>
-      </button>
-
-      {/* Деньги */}
-      <div className="mt-10">
-        <p className="font-bold">💰 Деньги: {money}</p>
-
-        {!flashlight && (
-          <button
-            onClick={buyFlashlight}
-            className="mt-2 px-3 py-2 bg-black text-white rounded"
-          >
-            Купить фонарик (50)
-          </button>
-        )}
+      <div className="mt-8 rounded-lg border p-3">
+        <p className="font-bold">Деньги: {money}</p>
+        <p className="text-sm mt-1">Фонарик: {flashlight ? "есть" : "нет"}</p>
       </div>
     </div>
   );

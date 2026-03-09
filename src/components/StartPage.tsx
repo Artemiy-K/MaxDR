@@ -157,20 +157,17 @@ function StartPage({ setStageLoading }: StartPageProps) {
       )}
 
       {stage === "recovered" && (
-        <div className="max-w-lg items-center flex w-full h-full flex-col mt-[100px]">
+        <div className="max-w-lg items-center flex w-full h-full flex-col mt-[100px] ">
           <h1 className="text-2xl font-bold mb-4">Восстановленный фрагмент</h1>
 
-          <div className="w-[1000px] h-[1000px]">
-            <video
-              autoPlay
-              controls
-              src="/obraschenie1.mp4"
-              onEnded={() => {
-                setTimeout(() => {
-                  setStage("dangerous");
-                }, 1500);
-              }}
-            ></video>
+          <div className="">
+            <iframe
+              width="760"
+              height="380"
+              src="https://www.youtube.com/embed/KyQ7wxDRnHY"
+              title="video"
+              allowFullScreen
+            />
           </div>
         </div>
       )}
