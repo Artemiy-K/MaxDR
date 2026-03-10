@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import YouTube from "react-youtube";
 
 type TabOneMode = "questions" | "crossword" | "address" | "goodbye";
 
@@ -22,6 +23,8 @@ export default function TabOne({
     { answered: false, correct: false },
     { answered: false, correct: false },
   ]);
+
+  const [videoDone, setVideoDone] = useState(false);
 
   const [crosswordInputs, setCrosswordInputs] = useState(["", "", ""]);
   const [crosswordDone, setCrosswordDone] = useState(false);
@@ -150,132 +153,140 @@ export default function TabOne({
         </div>
       </div>
     );
-  }
+  } //PHvGSS3nMoA
 
   return (
     <div className="w-full h-full bg-white p-8 rounded-xl shadow-xl overflow-y-auto">
       <div className="mb-8 flex justify-center">
-        <iframe
-          width="760"
-          height="380"
-          src="https://www.youtube.com/embed/KyQ7wxDRnHY"
-          title="video"
-          allowFullScreen
+        <YouTube
+          videoId="PHvGSS3nMoA"
+          opts={{
+            width: "760",
+            height: "380",
+            playerVars: {
+              modestbranding: 1,
+              rel: 0,
+            },
+          }}
+          onEnd={() => setVideoDone(true)}
         />
       </div>
 
-      <div className="max-w-4xl mx-auto text-center ">
-        <div className="flex justify-center gap-4 mb-8">
-          {[0, 1, 2].map((i) => {
-            const s = state[i];
-            let style = "text-black";
+      {videoDone && (
+        <div className="max-w-4xl mx-auto text-center ">
+          <p className="mb-6 text-red-600 font-bold glitch">докажи что это ты</p>
+          <div className="flex justify-center gap-4 mb-8">
+            {[0, 1, 2].map((i) => {
+              const s = state[i];
+              let style = "text-black";
 
-            if (s.answered) {
-              style = s.correct
-                ? "bg-green-500 text-white"
-                : "bg-red-500 text-white";
-            }
+              if (s.answered) {
+                style = s.correct
+                  ? "bg-green-500 text-white"
+                  : "bg-red-500 text-white";
+              }
 
-            if (selected === i) {
-              style += " border-black";
-            }
+              if (selected === i) {
+                style += " border-black";
+              }
 
-            return (
-              <div
-                key={i}
-                onClick={() => setSelected(i)}
-                className={`w-12 h-12 flex items-center justify-center cursor-pointer border-2 rounded-md ${style}`}
+              return (
+                <div
+                  key={i}
+                  onClick={() => setSelected(i)}
+                  className={`w-12 h-12 flex items-center justify-center cursor-pointer border-2 rounded-md ${style}`}
+                >
+                  {i + 1}
+                </div>
+              );
+            })}
+          </div>
+
+          {selected === 0 && (
+            <div>
+              <p className="font-semibold mb-4">
+                Какой адрес был у так называемого Дворца спорта?
+              </p>
+              <input
+                value={inputs[0]}
+                onChange={(e) => updateInput(e.target.value, 0)}
+                className="border p-2 mb-4 w-72"
+              />
+              <br />
+              <button
+                onClick={() => submit(0)}
+                className="px-6 py-2 bg-black text-white rounded"
               >
-                {i + 1}
-              </div>
-            );
-          })}
+                Ответить
+              </button>
+              {state[0].answered && (
+                <p
+                  className={`mt-4 font-bold ${state[0].correct ? "text-green-600" : "text-red-600"}`}
+                >
+                  {state[0].correct ? "Верно" : "Неверно"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {selected === 1 && (
+            <div>
+              <p className="font-semibold mb-4">
+                Какая страна выиграла первый женский ЧМ (1952)?
+              </p>
+              <input
+                value={inputs[1]}
+                onChange={(e) => updateInput(e.target.value, 1)}
+                className="border p-2 mb-4 w-72"
+              />
+              <br />
+              <button
+                onClick={() => submit(1)}
+                className="px-6 py-2 bg-black text-white rounded"
+              >
+                Ответить
+              </button>
+              {state[1].answered && (
+                <p
+                  className={`mt-4 font-bold ${state[1].correct ? "text-green-600" : "text-red-600"}`}
+                >
+                  {state[1].correct ? "Верно" : "Неверно"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {selected === 2 && (
+            <div>
+              <p className="font-semibold mb-4">Реши уравнение:</p>
+              <img
+                src="/equation.jpg"
+                alt="equation"
+                className="mx-auto mb-4 w-[700px] h-[300px]"
+              />
+              <input
+                value={inputs[2]}
+                onChange={(e) => updateInput(e.target.value, 2)}
+                className="border p-2 mb-4 w-72"
+              />
+              <br />
+              <button
+                onClick={() => submit(2)}
+                className="px-6 py-2 bg-black text-white rounded"
+              >
+                Ответить
+              </button>
+              {state[2].answered && (
+                <p
+                  className={`mt-4 font-bold ${state[2].correct ? "text-green-600" : "text-red-600"}`}
+                >
+                  {state[2].correct ? "Верно" : "Неверно"}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-
-        {selected === 0 && (
-          <div>
-            <p className="font-semibold mb-4">
-              Какой адрес был у так называемого Дворца спорта?
-            </p>
-            <input
-              value={inputs[0]}
-              onChange={(e) => updateInput(e.target.value, 0)}
-              className="border p-2 mb-4 w-72"
-            />
-            <br />
-            <button
-              onClick={() => submit(0)}
-              className="px-6 py-2 bg-black text-white rounded"
-            >
-              Ответить
-            </button>
-            {state[0].answered && (
-              <p
-                className={`mt-4 font-bold ${state[0].correct ? "text-green-600" : "text-red-600"}`}
-              >
-                {state[0].correct ? "Верно" : "Неверно"}
-              </p>
-            )}
-          </div>
-        )}
-
-        {selected === 1 && (
-          <div>
-            <p className="font-semibold mb-4">
-              Какая страна выиграла первый женский ЧМ (1952)?
-            </p>
-            <input
-              value={inputs[1]}
-              onChange={(e) => updateInput(e.target.value, 1)}
-              className="border p-2 mb-4 w-72"
-            />
-            <br />
-            <button
-              onClick={() => submit(1)}
-              className="px-6 py-2 bg-black text-white rounded"
-            >
-              Ответить
-            </button>
-            {state[1].answered && (
-              <p
-                className={`mt-4 font-bold ${state[1].correct ? "text-green-600" : "text-red-600"}`}
-              >
-                {state[1].correct ? "Верно" : "Неверно"}
-              </p>
-            )}
-          </div>
-        )}
-
-        {selected === 2 && (
-          <div>
-            <p className="font-semibold mb-4">Реши уравнение:</p>
-            <img
-              src="/equation.jpg"
-              alt="equation"
-              className="mx-auto mb-4 w-[700px] h-[300px]"
-            />
-            <input
-              value={inputs[2]}
-              onChange={(e) => updateInput(e.target.value, 2)}
-              className="border p-2 mb-4 w-72"
-            />
-            <br />
-            <button
-              onClick={() => submit(2)}
-              className="px-6 py-2 bg-black text-white rounded"
-            >
-              Ответить
-            </button>
-            {state[2].answered && (
-              <p
-                className={`mt-4 font-bold ${state[2].correct ? "text-green-600" : "text-red-600"}`}
-              >
-                {state[2].correct ? "Верно" : "Неверно"}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

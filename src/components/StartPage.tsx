@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import YouTube from "react-youtube";
 
 type StartPageProps = {
   setStageLoading: () => void;
@@ -157,16 +158,25 @@ function StartPage({ setStageLoading }: StartPageProps) {
       )}
 
       {stage === "recovered" && (
-        <div className="max-w-lg items-center flex w-full h-full flex-col mt-[100px] ">
+        <div className="max-w-lg items-center flex w-full h-full flex-col mt-[100px] огы">
           <h1 className="text-2xl font-bold mb-4">Восстановленный фрагмент</h1>
 
           <div className="">
-            <iframe
-              width="760"
-              height="380"
-              src="https://www.youtube.com/embed/KyQ7wxDRnHY"
-              title="video"
-              allowFullScreen
+            <YouTube
+              videoId="KyQ7wxDRnHY"
+              opts={{
+                width: "760",
+                height: "380",
+                playerVars: {
+                  modestbranding: 1,
+                  rel: 0,
+                },
+              }}
+              onEnd={() => {
+                setTimeout(() => {
+                  setStage("dangerous");
+                }, 1500);
+              }}
             />
           </div>
         </div>
