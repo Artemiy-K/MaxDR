@@ -89,7 +89,7 @@ function StartPage({ setStageLoading }: StartPageProps) {
     }
 
     if (!audioPlayed) {
-      const audio = new Audio("/public/prosba.mp3");
+      const audio = new Audio("/prosba.mp3");
       audio.play().catch(() => {});
       setAudioPlayed(true);
 
