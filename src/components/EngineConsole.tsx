@@ -46,7 +46,7 @@ const engineChecks = [
   {
     prompt: "If connectionRequest === true and userStatus === LoggedIn:",
     options: ["LoginWithAdminRights", "LoginToTheAccount", "LoginLikeBigBoss"],
-    correct: '"LoginWithAdminRights"',
+    correct: "LoginWithAdminRights",
   },
 ] as const;
 
@@ -72,7 +72,9 @@ const getNextRegistrationRule = (login: string, password: string) => {
     return `Пароль должен включать ${currentYear}.`;
   }
 
-  const hasPartnerToken = partnerTokens.some((token) => password.includes(token));
+  const hasPartnerToken = partnerTokens.some((token) =>
+    password.includes(token),
+  );
   if (!hasPartnerToken) {
     return 'Включи в пароль 1 из наших партнеров: "Пепси", "КоЛа", "ФантАА".';
   }
@@ -114,6 +116,7 @@ export default function EngineConsole({
   const [accountRegistered, setAccountRegistered] = useState(false);
   const [codeUnlocked, setCodeUnlocked] = useState(false);
   const [checkIndex, setCheckIndex] = useState(0);
+  const [checkCycleFailed, setCheckCycleFailed] = useState(false);
   const [checksCycleComplete, setChecksCycleComplete] = useState(false);
 
   useEffect(() => {
@@ -133,6 +136,7 @@ export default function EngineConsole({
     setAccountRegistered(false);
     setCodeUnlocked(false);
     setCheckIndex(0);
+    setCheckCycleFailed(false);
     setChecksCycleComplete(false);
   }, [linkOnline, photoSolved]);
 
@@ -152,7 +156,9 @@ export default function EngineConsole({
     ? "bg-[repeating-linear-gradient(to_bottom,rgba(74,222,128,0.18)_0px,rgba(74,222,128,0.18)_1px,transparent_1px,transparent_4px)]"
     : "bg-[repeating-linear-gradient(to_bottom,rgba(248,113,113,0.18)_0px,rgba(248,113,113,0.18)_1px,transparent_1px,transparent_4px)]";
   const consoleTextClass = consoleOnline ? "text-[#8ef58e]" : "text-[#f5a0a0]";
-  const consoleBorderClass = consoleOnline ? "border-[#355b35]" : "border-[#5b3535]";
+  const consoleBorderClass = consoleOnline
+    ? "border-[#355b35]"
+    : "border-[#5b3535]";
   const consolePanelClass = consoleOnline ? "bg-[#030903]" : "bg-[#090303]";
   const consoleBtnActiveClass = consoleOnline
     ? "bg-[#173a17] border-[#74e774]"
@@ -164,7 +170,9 @@ export default function EngineConsole({
     ? "border-[#355b35] bg-[#081408] text-[#8ef58e]"
     : "border-[#5b3535] bg-[#140808] text-[#f5a0a0]";
   const consoleMutedClass = consoleOnline ? "text-[#8fcd8f]" : "text-[#cd8f8f]";
-  const consoleBrightClass = consoleOnline ? "text-[#7dff7d]" : "text-[#ff7d7d]";
+  const consoleBrightClass = consoleOnline
+    ? "text-[#7dff7d]"
+    : "text-[#ff7d7d]";
   const consoleNoteClass = consoleOnline ? "text-[#d0ffd0]" : "text-[#ffd0d0]";
 
   const handleRegistrationSubmit = () => {
@@ -177,7 +185,9 @@ export default function EngineConsole({
     setAccountRegistered(true);
     setCodeUnlocked(true);
     appendLog(`auth: registered ${login}`);
-    setAuthMessage("Регистрация завершена. Во вкладке code открыт код авторизации.");
+    setAuthMessage(
+      "Регистрация завершена. Во вкладке code открыт код авторизации.",
+    );
   };
 
   const handleLogout = () => {
@@ -212,22 +222,39 @@ export default function EngineConsole({
   const pickCheckOption = (option: string) => {
     if (!activeCheck) return;
 
-    if (option === activeCheck.correct) {
+    const isCorrect = option === activeCheck.correct;
+    const next = checkIndex + 1;
+    const cycleWillFail = checkCycleFailed || !isCorrect;
+
+    if (isCorrect) {
       appendLog(`check ${checkIndex + 1}: OK`);
     } else {
       appendLog(`check ${checkIndex + 1}: FAIL`);
-      setAuthMessage("Неверно. Переходим к следующему вопросу.");
+      setCheckCycleFailed(true);
     }
-
-    const next = checkIndex + 1;
 
     if (next >= engineChecks.length) {
       setCheckIndex(0);
-      setChecksCycleComplete(true);
-      appendLog("checks: engine flags cycle restart");
-      setAuthMessage("Цикл проверок завершен. Открыта регистрация в консоли.");
+
+      if (cycleWillFail) {
+        appendLog("checks: engine flags cycle reset after error");
+        setCheckCycleFailed(false);
+        setChecksCycleComplete(false);
+        setAuthMessage("Была ошибка в серии. Возврат к первому вопросу.");
+      } else {
+        setChecksCycleComplete(true);
+        appendLog("checks: engine flags cycle accepted");
+        setAuthMessage(
+          "Цикл проверок завершен. Открыта регистрация в консоли.",
+        );
+      }
     } else {
       setCheckIndex(next);
+      setAuthMessage(
+        isCorrect
+          ? "Верно. Переходим к следующему вопросу."
+          : "Неверно. Переходим к следующему вопросу, но серия уже испорчена.",
+      );
     }
   };
 
@@ -249,15 +276,21 @@ export default function EngineConsole({
 
   return (
     <div className="absolute right-6 bottom-6 z-20 w-[640px]">
-      <div className={`relative rounded-2xl border-2 overflow-hidden ${consoleShellClass}`}>
-        <div className={`pointer-events-none absolute inset-0 opacity-20 ${consoleScanClass}`} />
+      <div
+        className={`relative rounded-2xl border-2 overflow-hidden ${consoleShellClass}`}
+      >
+        <div
+          className={`pointer-events-none absolute inset-0 opacity-20 ${consoleScanClass}`}
+        />
         <div className={`relative p-4 ${consoleTextClass}`}>
           {requestUnlocked && (
             <div className="mb-3 flex gap-2">
               <button
                 onClick={() => setConsoleTab("request")}
                 className={`px-3 py-2 rounded border font-mono text-sm ${
-                  consoleTab === "request" ? consoleBtnActiveClass : consoleBtnIdleClass
+                  consoleTab === "request"
+                    ? consoleBtnActiveClass
+                    : consoleBtnIdleClass
                 }`}
               >
                 REQUEST
@@ -266,7 +299,9 @@ export default function EngineConsole({
                 onClick={() => setConsoleTab("code")}
                 disabled={!codeTabVisible}
                 className={`px-3 py-2 rounded border font-mono text-sm ${
-                  consoleTab === "code" ? consoleBtnActiveClass : consoleBtnIdleClass
+                  consoleTab === "code"
+                    ? consoleBtnActiveClass
+                    : consoleBtnIdleClass
                 } ${!codeTabVisible ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 CODE
@@ -278,23 +313,33 @@ export default function EngineConsole({
             <div
               className={`flex flex-col justify-center h-[320px] overflow-y-auto rounded border ${consoleBorderClass} ${consolePanelClass} p-3 font-mono text-sm space-y-1`}
             >
-              <div className={`font-mono text-sm ${consoleOnline ? "text-green-300" : "text-red-300"}`}>
+              <div
+                className={`font-mono text-sm ${consoleOnline ? "text-green-300" : "text-red-300"}`}
+              >
                 {connectionStatus}
               </div>
-              {connectionHint && <div className={consoleMutedClass}>{connectionHint}</div>}
+              {connectionHint && (
+                <div className={consoleMutedClass}>{connectionHint}</div>
+              )}
 
               {photoSolved && !linkOnline && (
                 <div className="mt-4 space-y-2">
                   {connecting ? (
                     <>
-                      <div className={`text-sm ${consoleBrightClass}`}>подключение...</div>
-                      <div className={`h-2 rounded border ${consoleBorderClass} bg-black/40 overflow-hidden`}>
+                      <div className={`text-sm ${consoleBrightClass}`}>
+                        подключение...
+                      </div>
+                      <div
+                        className={`h-2 rounded border ${consoleBorderClass} bg-black/40 overflow-hidden`}
+                      >
                         <div
                           className="h-full bg-green-400 transition-all duration-200"
                           style={{ width: `${connectProgress}%` }}
                         />
                       </div>
-                      <div className={`text-xs ${consoleMutedClass}`}>{connectProgress}%</div>
+                      <div className={`text-xs ${consoleMutedClass}`}>
+                        {connectProgress}%
+                      </div>
                     </>
                   ) : (
                     <button
@@ -307,7 +352,11 @@ export default function EngineConsole({
                 </div>
               )}
 
-              {authMessage && <div className={`text-sm ${consoleNoteClass}`}>{authMessage}</div>}
+              {authMessage && (
+                <div className={`text-sm ${consoleNoteClass}`}>
+                  {authMessage}
+                </div>
+              )}
 
               {linkOnline && !checksCycleComplete && activeCheck && (
                 <div className="mt-4 rounded border border-green-500 bg-black/80 p-3 text-green-300 h-full">
@@ -324,31 +373,39 @@ export default function EngineConsole({
                           onClick={() => pickCheckOption("fuel module")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           fuel module
                         </button>
                         <button
                           onClick={() => pickCheckOption("power module")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           power module
                         </button>
                         <button
                           onClick={() => pickCheckOption("admin override")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           admin override
                         </button>
                       </div>
                     </>
                   )}
 
-                  {activeCheck.prompt === "if iselectricityAvailable === true: isEngineStart =" && (
+                  {activeCheck.prompt ===
+                    "if iselectricityAvailable === true: isEngineStart =" && (
                     <>
                       <div className="mb-3">
-                        if iselectricityAvailable === true: <p>isEngineStart =</p>
+                        if iselectricityAvailable === true:{" "}
+                        <p>isEngineStart =</p>
                       </div>
 
                       <div className="flex flex-col gap-4">
@@ -356,83 +413,110 @@ export default function EngineConsole({
                           onClick={() => pickCheckOption("true")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           true
                         </button>
                         <button
                           onClick={() => pickCheckOption("false")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           false
                         </button>
                         <button
                           onClick={() => pickCheckOption('"123"')}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           "123"
                         </button>
                       </div>
                     </>
                   )}
 
-                  {activeCheck.prompt === "coolingSystem === false && temperature > 90" && (
+                  {activeCheck.prompt ===
+                    "coolingSystem === false && temperature > 90" && (
                     <>
                       <p>coolingSystem doesnt work</p>
                       <p>const temperature = 60</p>
-                      <div className="mb-3">coolingSystem === false && temperature &gt; 90</div>
+                      <div className="mb-3">
+                        coolingSystem === false && temperature &gt; 90
+                      </div>
 
                       <div className="flex flex-col gap-4">
                         <button
                           onClick={() => pickCheckOption("EngineOverheat")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           EngineOverheat
                         </button>
                         <button
                           onClick={() => pickCheckOption("CheckCooling")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           CheckCooling
                         </button>
                         <button
                           onClick={() => pickCheckOption("EngineReady")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           EngineReady
                         </button>
                       </div>
                     </>
                   )}
 
-                  {activeCheck.prompt === "If connectionRequest === true and userStatus === LoggedIn:" && (
+                  {activeCheck.prompt ===
+                    "If connectionRequest === true and userStatus === LoggedIn:" && (
                     <>
-                      <div className="mb-3">If connectionRequest === true and userStatus === LoggedIn:</div>
+                      <div className="mb-3">
+                        If connectionRequest === true and userStatus ===
+                        LoggedIn:
+                      </div>
 
                       <div className="flex flex-col gap-4">
                         <button
                           onClick={() => pickCheckOption("LoginLikeBigBoss")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           LoginLikeBigBoss
                         </button>
                         <button
                           onClick={() => pickCheckOption("LoginToTheAccount")}
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           LoginToTheAccount
                         </button>
                         <button
-                          onClick={() => pickCheckOption("LoginWithAdminRights")}
+                          onClick={() =>
+                            pickCheckOption("LoginWithAdminRights")
+                          }
                           className="group relative px-3 py-2 pl-10 rounded bg-green-700/30 border border-green-500 text-left hover:bg-green-600/30 transition"
                         >
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">&gt;</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-bold text-green-300 opacity-0 group-hover:opacity-100 transition">
+                            &gt;
+                          </span>
                           LoginWithAdminRights
                         </button>
                       </div>
@@ -444,10 +528,17 @@ export default function EngineConsole({
           )}
 
           {requestUnlocked && consoleTab === "request" && (
-            <div className={`h-[320px] overflow-y-auto rounded border ${consoleBorderClass} ${consolePanelClass} p-4 font-mono`}>
+            <div
+              className={`h-[320px] overflow-y-auto rounded border ${consoleBorderClass} ${consolePanelClass} p-4 font-mono`}
+            >
               <div className="mb-4 text-left text-sm space-y-1">
-                <div>Чтобы взломать код, нам определенно нужно зарегистрироваться.</div>
-                <div>После регистрации мы сможем украсть код, который работает на авторизацию.</div>
+                <div>
+                  Чтобы взломать код, нам определенно нужно зарегистрироваться.
+                </div>
+                <div>
+                  После регистрации мы сможем украсть код, который работает на
+                  авторизацию.
+                </div>
               </div>
 
               <div className="grid gap-3 text-left">
@@ -520,19 +611,26 @@ export default function EngineConsole({
                   </div>
                 )}
 
-                {codeUnlocked && !accountRegistered && !adminGranted && authMessage && (
-                  <div className={`text-sm ${consoleNoteClass}`}>{authMessage}</div>
-                )}
+                {codeUnlocked &&
+                  !accountRegistered &&
+                  !adminGranted &&
+                  authMessage && (
+                    <div className={`text-sm ${consoleNoteClass}`}>
+                      {authMessage}
+                    </div>
+                  )}
 
                 {codeUnlocked && accountRegistered && !adminGranted && (
                   <div className={`text-sm ${consoleNoteClass}`}>
-                    Аккаунт создан. Открой вкладку code, посмотри код и потом разлогинься.
+                    Аккаунт создан. Открой вкладку code, посмотри код и потом
+                    разлогинься.
                   </div>
                 )}
 
                 {adminGranted && (
                   <div className={`text-sm ${consoleBrightClass}`}>
-                    Доступ с максимальными правами открыт. Можно перезапускать систему.
+                    Доступ с максимальными правами открыт. Можно перезапускать
+                    систему.
                   </div>
                 )}
               </div>
@@ -540,10 +638,12 @@ export default function EngineConsole({
           )}
 
           {requestUnlocked && consoleTab === "code" && (
-            <div className={`h-[320px] overflow-y-auto rounded border ${consoleBorderClass} ${consolePanelClass} p-4 font-mono text-sm space-y-3`}>
+            <div
+              className={`h-[320px] overflow-y-auto rounded border ${consoleBorderClass} ${consolePanelClass} p-4 font-mono text-sm space-y-3`}
+            >
               <div className={consoleBrightClass}>registration.ts</div>
               <pre className="whitespace-pre-wrap text-left leading-6 text-[#a9f5a9]">
-{`function registerUser(username, password) {
+                {`function registerUser(username, password) {
   createDefaultAccount(username, password);
 
   if (username === "Nesky" && password === "1212") {
@@ -557,9 +657,6 @@ export default function EngineConsole({
   return createUserSession(username);
 }`}
               </pre>
-              <div className={consoleNoteClass}>
-                Между обычной регистрацией и максимальными правами спрятан ложный аккаунт.
-              </div>
             </div>
           )}
         </div>
@@ -567,7 +664,3 @@ export default function EngineConsole({
     </div>
   );
 }
-
-
-
-

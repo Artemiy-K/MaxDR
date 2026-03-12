@@ -19,21 +19,21 @@ const questionSets = {
     {
       prompt: "Опиши, что происходит на картинке",
       image: "/vstrecha1.jpg",
-      answer: "встреча с саней",
+      answer: "1", // fix встреча с саней
     },
     {
       prompt: "Опиши, что происходит на картинке",
       image: "/vstrecha2.jpg",
-      answer: "встреча возле синей машины",
+      answer: "1", // fix встреча возле синей машины
     },
     {
       prompt: "Опиши, что происходит на картинке",
       image: "/vstrecha3.jpg",
-      answer: "встреча на горе",
+      answer: "1", // fix встреча на горе
     },
     {
       prompt: "Каким 1 словом можно объединить эти 3 фотографии",
-      answer: "встреча",
+      answer: "1", // fix встреча
     },
   ],
   frage: [
@@ -62,10 +62,13 @@ const normalizeAnswer = (value: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-type QuestionItem = (typeof questionSets.meeting)[number] | (typeof questionSets.frage)[number];
+type QuestionItem =
+  | (typeof questionSets.meeting)[number]
+  | (typeof questionSets.frage)[number];
 
-const hasImage = (question: QuestionItem): question is QuestionItem & { image: string } =>
-  "image" in question;
+const hasImage = (
+  question: QuestionItem,
+): question is QuestionItem & { image: string } => "image" in question;
 
 export default function EnginePanel({
   stage,
@@ -95,6 +98,7 @@ export default function EnginePanel({
   const [answer, setAnswer] = useState("");
   const [photoQuestionIndex, setPhotoQuestionIndex] = useState(0);
   const [photoAnsweredCount, setPhotoAnsweredCount] = useState(0);
+  const [photoCycleFailed, setPhotoCycleFailed] = useState(false);
 
   const [reportedSolved, setReportedSolved] = useState(false);
 
@@ -115,6 +119,7 @@ export default function EnginePanel({
       setAnswer("");
       setPhotoQuestionIndex(0);
       setPhotoAnsweredCount(0);
+      setPhotoCycleFailed(false);
       setReportedSolved(false);
     }
   }, [isBroken, questionSet]);
@@ -157,22 +162,34 @@ export default function EnginePanel({
 
     const normalized = normalizeAnswer(answer);
     const ok = normalized === normalizeAnswer(activePhotoQuestion.answer);
+    const nextIndex = photoQuestionIndex + 1;
+    const cycleWillFail = photoCycleFailed || !ok;
 
     if (!ok) {
-      return;
+      appendLog(
+        `photo: ${questionSet} question ${photoQuestionIndex + 1} failed`,
+      );
+      setPhotoCycleFailed(true);
+    } else {
+      setPhotoAnsweredCount((prev) => Math.min(prev + 1, totalPhotoQuestions));
     }
 
-    const nextIndex = photoQuestionIndex + 1;
-    setPhotoAnsweredCount((prev) => Math.min(prev + 1, totalPhotoQuestions));
-
     if (nextIndex >= totalPhotoQuestions) {
-      if (!photoSolved) {
-        onPhotoSolved();
-        appendLog(`photo: ${questionSet} answers accepted`);
+      if (!cycleWillFail) {
+        if (!photoSolved) {
+          onPhotoSolved();
+          appendLog(`photo: ${questionSet} answers accepted`);
+        }
+      } else {
+        appendLog(`photo: ${questionSet} cycle reset to first question`);
+        setPhotoQuestionIndex(0);
+        setPhotoAnsweredCount(0);
+        setPhotoCycleFailed(false);
       }
     } else {
       setPhotoQuestionIndex(nextIndex);
     }
+
     setAnswer("");
   };
 
@@ -233,14 +250,16 @@ export default function EnginePanel({
                     />
                   ) : (
                     <div className="grid h-full w-full grid-rows-3 gap-2">
-                      {photoQuestions.filter(hasImage).map((question, index) => (
-                        <img
-                          key={`${question.image}-${index}`}
-                          src={question.image}
-                          alt={`Фото ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
-                      ))}
+                      {photoQuestions
+                        .filter(hasImage)
+                        .map((question, index) => (
+                          <img
+                            key={`${question.image}-${index}`}
+                            src={question.image}
+                            alt={`Фото ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        ))}
                     </div>
                   )}
                 </div>
@@ -382,7 +401,3 @@ export default function EnginePanel({
     </div>
   );
 }
-
-
-
-

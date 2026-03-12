@@ -54,7 +54,7 @@ const radioDialog = [
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabId>(1);
-  const [storyStep, setStoryStep] = useState<StoryStep>(0);
+  const [storyStep, setStoryStep] = useState<StoryStep>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsPuzzleSolved, setSettingsPuzzleSolved] = useState(false);
   const [settingsBackdoorUnlocked, setSettingsBackdoorUnlocked] =
