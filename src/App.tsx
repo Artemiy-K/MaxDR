@@ -4,9 +4,7 @@ import MatrixConsole from "./components/loadingPage";
 import HomePage from "./components/HomePage";
 
 function App() {
-  const [stage, setStage] = useState<"start" | "loading" | "TheGame">(
-    "TheGame",
-  );
+  const [stage, setStage] = useState<"start" | "loading" | "TheGame">("start");
   const setStageLoading = useCallback(() => {
     setStage("loading");
   }, [setStage]);

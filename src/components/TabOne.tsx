@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import YouTube from "react-youtube";
+import CrosswordApp from "./CrosswordApp";
 
 type TabOneMode = "questions" | "crossword" | "address" | "goodbye";
 
@@ -26,32 +27,18 @@ export default function TabOne({
 
   const [videoDone, setVideoDone] = useState(false);
 
-  const [crosswordInputs, setCrosswordInputs] = useState(["", "", ""]);
-  const [crosswordDone, setCrosswordDone] = useState(false);
-
   const correctAnswers = ["улица богдана хмельницкого 100", "СССР", "2"];
-  const crosswordAnswers = ["макс", "варя", "index rubej"];
 
   useEffect(() => {
     if (mode !== "questions") {
       return;
     }
 
-    const allCorrect = state.every((q) => q.answered && q.correct);
+    const allCorrect = state.every((question) => question.answered && question.correct);
     if (allCorrect) {
       onQuestionsComplete();
     }
   }, [state, onQuestionsComplete, mode]);
-
-  useEffect(() => {
-    if (mode !== "crossword") {
-      return;
-    }
-
-    if (crosswordDone) {
-      onCrosswordComplete();
-    }
-  }, [crosswordDone, onCrosswordComplete, mode]);
 
   const submit = (index: number) => {
     const isCorrect =
@@ -64,18 +51,9 @@ export default function TabOne({
   };
 
   const updateInput = (value: string, index: number) => {
-    const arr = [...inputs];
-    arr[index] = value;
-    setInputs(arr);
-  };
-
-  const checkCrossword = () => {
-    const ok = crosswordInputs.every(
-      (value, index) =>
-        value.trim().toLowerCase() === crosswordAnswers[index].toLowerCase(),
-    );
-
-    setCrosswordDone(ok);
+    const nextInputs = [...inputs];
+    nextInputs[index] = value;
+    setInputs(nextInputs);
   };
 
   if (mode === "address") {
@@ -107,53 +85,8 @@ export default function TabOne({
   }
 
   if (mode === "crossword") {
-    return (
-      <div className="w-full h-full bg-white p-10 rounded-xl shadow-xl">
-        <h2 className="text-2xl font-bold mb-6">Кроссворд после перезапуска</h2>
-        <div className="grid gap-3 max-w-xl">
-          <input
-            value={crosswordInputs[0]}
-            onChange={(e) =>
-              setCrosswordInputs((prev) => [e.target.value, prev[1], prev[2]])
-            }
-            className="border p-2"
-            placeholder="Имя главного героя"
-          />
-          <input
-            value={crosswordInputs[1]}
-            onChange={(e) =>
-              setCrosswordInputs((prev) => [prev[0], e.target.value, prev[2]])
-            }
-            className="border p-2"
-            placeholder="Имя девушки"
-          />
-          <input
-            value={crosswordInputs[2]}
-            onChange={(e) =>
-              setCrosswordInputs((prev) => [prev[0], prev[1], e.target.value])
-            }
-            className="border p-2"
-            placeholder="Фраза финальных букв"
-          />
-          <button
-            onClick={checkCrossword}
-            className="px-6 py-2 bg-black text-white rounded"
-          >
-            Проверить кроссворд
-          </button>
-          {crosswordDone ? (
-            <p className="text-green-600 font-semibold">
-              Отлично. Тебе дали лучший интернет, вкладка 3 активна.
-            </p>
-          ) : (
-            <p className="text-neutral-600 text-sm">
-              Подсказка: финальная фраза пишется как "index rubej".
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  } //PHvGSS3nMoA
+    return <CrosswordApp onSolved={onCrosswordComplete} />;
+  }
 
   return (
     <div className="w-full h-full bg-white p-8 rounded-xl shadow-xl overflow-y-auto">
@@ -177,11 +110,11 @@ export default function TabOne({
           <p className="mb-6 text-red-600 font-bold glitch">докажи что это ты</p>
           <div className="flex justify-center gap-4 mb-8">
             {[0, 1, 2].map((i) => {
-              const s = state[i];
+              const answerState = state[i];
               let style = "text-black";
 
-              if (s.answered) {
-                style = s.correct
+              if (answerState.answered) {
+                style = answerState.correct
                   ? "bg-green-500 text-white"
                   : "bg-red-500 text-white";
               }

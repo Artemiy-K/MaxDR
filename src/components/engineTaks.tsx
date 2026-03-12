@@ -1,53 +1,89 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 interface EnginePanelProps {
   stage: "firstBreakdown" | "restored";
+  questionSet: "meeting" | "frage";
   onSolved?: () => void;
   linkOnline: boolean;
-  setLinkOnline: (value: boolean) => void;
-  checkIndex: number;
-  setCheckIndex: (value: number) => void;
   appendLog: (line: string) => void;
-  setAuthMessage: (value: string) => void;
   adminGranted: boolean;
+  photoSolved: boolean;
+  onPhotoSolved: () => void;
+  connecting: boolean;
+  rebootReady?: boolean;
+  onManualReboot?: () => void;
 }
 
-const engineChecks = [
-  {
-    prompt: "Как правильно включить движок?",
-    options: ["setEngine = true", "setEngine = false", 'setEngine = "123"'],
-    correct: "setEngine = true",
-  },
-  {
-    prompt: "Что означает setEngine = false?",
-    options: ["Двигатель работает", "Двигатель выключен", "Это пароль"],
-    correct: "Двигатель выключен",
-  },
-  {
-    prompt: "Какой тип здесь ломает логику флага?",
-    options: ["true", "false", '"123"'],
-    correct: '"123"',
-  },
-  {
-    prompt: "Флаг admin можно включать без взлома?",
-    options: ["Да", "Нет"],
-    correct: "Нет",
-  },
-] as const;
+const questionSets = {
+  meeting: [
+    {
+      prompt: "Опиши, что происходит на картинке",
+      image: "/vstrecha1.jpg",
+      answer: "встреча с саней",
+    },
+    {
+      prompt: "Опиши, что происходит на картинке",
+      image: "/vstrecha2.jpg",
+      answer: "встреча возле синей машины",
+    },
+    {
+      prompt: "Опиши, что происходит на картинке",
+      image: "/vstrecha3.jpg",
+      answer: "встреча на горе",
+    },
+    {
+      prompt: "Каким 1 словом можно объединить эти 3 фотографии",
+      answer: "встреча",
+    },
+  ],
+  frage: [
+    {
+      prompt: "Что происходит на картинке",
+      image: "/frage1.jpg",
+      answer: "гамбруг ярмарка",
+    },
+    {
+      prompt: "Что происходит на картинке",
+      image: "/frage2.jpg",
+      answer: "волейбол",
+    },
+    {
+      prompt: "Что происходит на картинке",
+      image: "/frage3.jpg",
+      answer: "разнес с кулачины",
+    },
+  ],
+} as const;
 
-export const ENGINE_CHECKS_COUNT = engineChecks.length;
+const normalizeAnswer = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9\s]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+type QuestionItem = (typeof questionSets.meeting)[number] | (typeof questionSets.frage)[number];
+
+const hasImage = (question: QuestionItem): question is QuestionItem & { image: string } =>
+  "image" in question;
 
 export default function EnginePanel({
   stage,
+  questionSet,
   onSolved,
   linkOnline,
-  setLinkOnline,
-  checkIndex,
-  setCheckIndex,
   appendLog,
-  setAuthMessage,
   adminGranted,
+  photoSolved,
+  onPhotoSolved,
+  connecting,
+  rebootReady = false,
+  onManualReboot,
 }: EnginePanelProps) {
+  void linkOnline;
+  const photoQuestions = questionSets[questionSet];
+  const totalPhotoQuestions = photoQuestions.length;
+
   const [hintTop, setHintTop] = useState(true);
   const [hintLeft, setHintLeft] = useState(false);
   const [hintBottom, setHintBottom] = useState(false);
@@ -57,20 +93,15 @@ export default function EnginePanel({
   const [bottomAnswerPanelOpen, setBottomAnswerPanelOpen] = useState(false);
 
   const [answer, setAnswer] = useState("");
-  const [answerStatus, setAnswerStatus] = useState<"idle" | "ok" | "fail">(
-    "idle",
-  );
+  const [photoQuestionIndex, setPhotoQuestionIndex] = useState(0);
+  const [photoAnsweredCount, setPhotoAnsweredCount] = useState(0);
 
   const [reportedSolved, setReportedSolved] = useState(false);
 
   const isBroken = stage === "firstBreakdown";
-  const photoStage = isBroken && !linkOnline;
-  const checksDone = checkIndex >= engineChecks.length;
-
-  const activeCheck = useMemo(() => {
-    if (checksDone) return null;
-    return engineChecks[checkIndex];
-  }, [checkIndex, checksDone]);
+  const photoStage = isBroken && !photoSolved;
+  const activePhotoQuestion = photoQuestions[photoQuestionIndex];
+  const questionVisible = leftImagePanelOpen && bottomAnswerPanelOpen;
 
   useEffect(() => {
     if (isBroken) {
@@ -81,18 +112,24 @@ export default function EnginePanel({
       setShowRebootButton(true);
       setLeftImagePanelOpen(false);
       setBottomAnswerPanelOpen(false);
-
       setAnswer("");
-      setAnswerStatus("idle");
+      setPhotoQuestionIndex(0);
+      setPhotoAnsweredCount(0);
       setReportedSolved(false);
     }
-  }, [isBroken]);
+  }, [isBroken, questionSet]);
+
+  useEffect(() => {
+    if (!photoSolved) return;
+    setLeftImagePanelOpen(false);
+    setBottomAnswerPanelOpen(false);
+  }, [photoSolved]);
 
   useEffect(() => {
     if (!isBroken || !adminGranted || reportedSolved) return;
     onSolved?.();
     setReportedSolved(true);
-  }, [isBroken, adminGranted, onSolved, reportedSolved]);
+  }, [adminGranted, isBroken, onSolved, reportedSolved]);
 
   const hideTopHint = () => {
     setHintTop(false);
@@ -116,50 +153,35 @@ export default function EnginePanel({
   };
 
   const checkPictureAnswer = () => {
-    const normalized = answer.toLowerCase().replace(/\s+/g, " ").trim();
-    const acceptedAnswers = [
-      "двигатель дымится",
-      "из двигателя идет дым",
-      "дым из двигателя",
-    ];
+    if (!questionVisible || !activePhotoQuestion) return;
 
-    const ok = acceptedAnswers.includes(normalized);
-    setAnswerStatus(ok ? "ok" : "fail");
+    const normalized = normalizeAnswer(answer);
+    const ok = normalized === normalizeAnswer(activePhotoQuestion.answer);
 
-    if (ok) {
-      setLinkOnline(true);
-      appendLog("net: connection restored");
-      appendLog("module: black square restored");
-      setAuthMessage("Связь восстановлена. Пройди setEngine-проверки.");
+    if (!ok) {
+      return;
     }
-  };
 
-  const pickCheckOption = (option: string) => {
-    if (!activeCheck) return;
+    const nextIndex = photoQuestionIndex + 1;
+    setPhotoAnsweredCount((prev) => Math.min(prev + 1, totalPhotoQuestions));
 
-    if (option === activeCheck.correct) {
-      const next = checkIndex + 1;
-      setCheckIndex(next);
-      appendLog(`check ${checkIndex + 1}: OK`);
-
-      if (next >= engineChecks.length) {
-        appendLog("checks: engine flags validated");
-        setAuthMessage(
-          "Проверки пройдены. Открыта консоль регистрации и взлома.",
-        );
+    if (nextIndex >= totalPhotoQuestions) {
+      if (!photoSolved) {
+        onPhotoSolved();
+        appendLog(`photo: ${questionSet} answers accepted`);
       }
     } else {
-      appendLog(`check ${checkIndex + 1}: FAIL`);
-      setAuthMessage("Неверно. Внимательно прочитай условие в подсказках.");
+      setPhotoQuestionIndex(nextIndex);
     }
+    setAnswer("");
   };
 
   return (
-    <div className="relative w-full h-full mt-10">
+    <div className="relative mt-10 h-full w-full">
       {photoStage && showRebootButton && (
         <button
           onClick={showSideHints}
-          className={`absolute right-[430px] -top-8 -translate-x-1/2 bg-red-600 text-white px-6 py-2 rounded shadow z-0 transition-transform duration-500 ${
+          className={`absolute right-[430px] -top-8 -translate-x-1/2 rounded bg-red-600 px-6 py-2 text-white shadow z-0 transition-transform duration-500 ${
             buttonLifted ? "-translate-y-1" : "translate-y-10"
           }`}
         >
@@ -167,11 +189,11 @@ export default function EnginePanel({
         </button>
       )}
 
-      <div className="flex items-start justify-center relative z-0">
+      <div className="relative z-0 flex items-start justify-center">
         {photoStage && hintTop && (
           <button
             onClick={hideTopHint}
-            className="absolute right-[500px] -top-8 z-0 bg-white/40 backdrop-blur-sm w-[100px] h-10 rounded-lg flex items-center justify-center text-black font-bold shadow border border-black transition-opacity duration-300"
+            className="absolute right-[500px] -top-8 z-0 flex h-10 w-[100px] items-center justify-center rounded-lg border border-black bg-white/40 font-bold text-black shadow backdrop-blur-sm transition-opacity duration-300"
           >
             ↑
           </button>
@@ -179,7 +201,7 @@ export default function EnginePanel({
         {photoStage && hintLeft && (
           <button
             onClick={handleLeftHintClick}
-            className="absolute left-[430px] top-1/2 -translate-y-1/2 z-0 bg-white/40 backdrop-blur-sm w-10 h-2/3 rounded-lg flex items-center justify-center text-xl text-black font-bold shadow border border-black transition-opacity duration-300"
+            className="absolute left-[430px] top-1/2 z-0 flex h-2/3 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-black bg-white/40 text-xl font-bold text-black shadow backdrop-blur-sm transition-opacity duration-300"
           >
             ←
           </button>
@@ -187,23 +209,40 @@ export default function EnginePanel({
         {photoStage && hintBottom && (
           <button
             onClick={handleBottomHintClick}
-            className="absolute -bottom-10 left-1/2 -translate-x-1/2 z-0 bg-white/40 backdrop-blur-sm w-[400px] h-10 rounded-lg flex items-center justify-center text-black font-bold shadow border border-black transition-opacity duration-300"
+            className="absolute -bottom-10 left-1/2 z-0 flex h-10 w-[400px] -translate-x-1/2 items-center justify-center rounded-lg border border-black bg-white/40 font-bold text-black shadow backdrop-blur-sm transition-opacity duration-300"
           >
             ↓
           </button>
         )}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-[560px] z-10">
+        <div className="z-10 w-[560px] rounded-xl bg-gray-800 p-6 shadow-2xl">
           {photoStage && (
             <div
-              className={`absolute top-0 left-[475px] h-[430px] w-[300px] z-0 -translate-x-full origin-right overflow-hidden rounded-xl border border-gray-700 bg-black/90 shadow-2xl transition-all duration-500 ${
+              className={`absolute top-0 left-[475px] z-0 h-[430px] w-[300px] -translate-x-full origin-right overflow-hidden rounded-xl border border-gray-700 bg-black/90 shadow-2xl transition-all duration-500 ${
                 leftImagePanelOpen
                   ? "scale-x-100 opacity-100"
                   : "pointer-events-none scale-x-0 opacity-0"
               }`}
             >
               <div className="h-full w-full p-3">
-                <div className="h-full rounded-lg border border-gray-600 bg-gray-800/70 text-gray-200 text-sm flex items-center justify-center">
-                  Фото 1: что происходит?
+                <div className="flex h-full items-center justify-center rounded-lg border border-gray-600 bg-gray-800/70 text-sm text-gray-200">
+                  {hasImage(activePhotoQuestion) ? (
+                    <img
+                      src={activePhotoQuestion.image}
+                      alt="Фото"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full w-full grid-rows-3 gap-2">
+                      {photoQuestions.filter(hasImage).map((question, index) => (
+                        <img
+                          key={`${question.image}-${index}`}
+                          src={question.image}
+                          alt={`Фото ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -219,112 +258,121 @@ export default function EnginePanel({
               <div className="flex items-center gap-2">
                 <input
                   value={answer}
-                  onChange={(e) => {
-                    setAnswer(e.target.value);
-                    setAnswerStatus("idle");
-                  }}
-                  placeholder="Опиши, что происходит на фото"
+                  onChange={(e) => setAnswer(e.target.value)}
+                  placeholder={
+                    questionVisible
+                      ? (activePhotoQuestion?.prompt ?? "Опиши картинку")
+                      : "loading"
+                  }
                   className="h-11 flex-1 rounded-lg border border-gray-500 bg-gray-900 px-3 text-white outline-none focus:border-cyan-400"
                 />
                 <button
                   onClick={checkPictureAnswer}
                   className="h-11 rounded-lg bg-cyan-500 px-4 font-semibold text-black transition-colors hover:bg-cyan-400"
                 >
-                  3D OK
+                  OK
                 </button>
               </div>
             </div>
           )}
-          <div className="flex mb-4 ">
-            <div className="w-24 flex flex-col gap-2">
-              <div className="h-3 bg-gray-600 rounded" />
-              <div className="h-3 bg-gray-500 rounded" />
-              <div className="h-3 bg-gray-600 rounded" />
+          <div className="mb-4 flex">
+            <div className="flex w-24 flex-col gap-2">
+              <div className="h-3 rounded bg-gray-600" />
+              <div className="h-3 rounded bg-gray-500" />
+              <div className="h-3 rounded bg-gray-600" />
             </div>
 
-            <div className="flex-1 ml-4">
-              <div className="flex justify-between mb-4">
+            <div className="ml-4 flex-1">
+              <div className="mb-4 flex justify-between">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={i}
-                    className="relative w-20 h-24 bg-gray-700 rounded-lg border border-gray-600"
+                    className="relative h-24 w-20 rounded-lg border border-gray-600 bg-gray-700"
                   >
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-10 h-10 bg-gray-500 rounded-full" />
+                    <div className="absolute bottom-2 left-1/2 h-10 w-10 -translate-x-1/2 rounded-full bg-gray-500" />
                   </div>
                 ))}
               </div>
 
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="w-32 h-2 bg-gray-900 rounded" />
-                <div className="w-6 h-6 bg-gray-600 rounded-full border-4 border-gray-500" />
-                <div className="w-32 h-2 bg-gray-900 rounded" />
+              <div className="mb-4 flex items-center justify-center gap-4">
+                <div className="h-2 w-32 rounded bg-gray-900" />
+                <div className="h-6 w-6 rounded-full border-4 border-gray-500 bg-gray-600" />
+                <div className="h-2 w-32 rounded bg-gray-900" />
               </div>
 
               {isBroken ? (
-                <div className="flex justify-center gap-6 mb-4">
-                  <div className="w-4 h-4 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]" />
-                  <div className="w-4 h-4 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]" />
-                  <div className="w-4 h-4 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]" />
+                <div className="mb-4 flex justify-center gap-6">
+                  {Array.from({ length: totalPhotoQuestions }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-4 w-4 rounded-full ${
+                        i < photoAnsweredCount
+                          ? "bg-green-500 shadow-[0_0_10px_#22c55e]"
+                          : "bg-red-500 shadow-[0_0_10px_#ef4444]"
+                      }`}
+                    />
+                  ))}
                 </div>
               ) : (
-                <div className="flex justify-center gap-6 mb-4">
-                  <div className="w-4 h-4 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]" />
-                  <div className="w-4 h-4 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]" />
-                  <div className="w-4 h-4 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]" />
+                <div className="mb-4 flex justify-center gap-6">
+                  {Array.from({ length: totalPhotoQuestions }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-4 w-4 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"
+                    />
+                  ))}
                 </div>
               )}
 
-              {isBroken && !linkOnline && (
-                <div className="bg-black text-red-400 font-mono p-4 rounded mb-4 h-24 flex flex-col items-center justify-center gap-2 border border-red-500 shadow-lg">
-                  <div>Опиши, что происходит на картинке</div>
-                  {answerStatus === "ok" && (
-                    <div className="text-green-400">Связь поднялась</div>
-                  )}
-                  {answerStatus === "fail" && (
-                    <div className="text-red-500">Ответ не совпал</div>
+              {isBroken && !photoSolved && (
+                <div className="mb-4 flex h-24 flex-col items-center justify-center gap-2 rounded border border-red-500 bg-black p-4 font-mono text-red-400 shadow-lg">
+                  <div>
+                    {questionVisible
+                      ? (activePhotoQuestion?.prompt ?? "Опиши, что происходит")
+                      : "loading"}
+                  </div>
+                  {questionVisible && questionSet === "meeting" && (
+                    <div className="text-xs text-red-300">
+                      Вопрос {photoQuestionIndex + 1} из {totalPhotoQuestions}
+                    </div>
                   )}
                 </div>
               )}
 
-              {isBroken && linkOnline && !checksDone && activeCheck && (
-                <div className="bg-black text-green-400 font-mono p-4 rounded mb-4 border border-green-500 shadow-lg">
+              {isBroken && photoSolved && (
+                <div className="mb-4 rounded border border-yellow-500 bg-black p-4 font-mono text-yellow-300 shadow-lg">
                   <div className="mb-2">
-                    Черный квадратик снизу восстанавливается...
+                    {rebootReady
+                      ? "Маршрут активирован"
+                      : connecting
+                        ? "Подключение к модулю..."
+                        : "Попытка подключения"}
                   </div>
-                  <div className="mb-3">{activeCheck.prompt}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {activeCheck.options.map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => pickCheckOption(option)}
-                        className="px-3 py-2 rounded bg-green-700/30 border border-green-500"
-                      >
-                        {option}
-                      </button>
-                    ))}
+                  <div className="text-sm text-yellow-200">
+                    {rebootReady
+                      ? "Ответы приняты. Теперь перезапусти сайт вручную."
+                      : "Консоль готова. Нажми «подключиться»."}
                   </div>
-                </div>
-              )}
-
-              {isBroken && linkOnline && checksDone && (
-                <div className="bg-black text-green-400 font-mono p-4 rounded mb-4 border border-green-500 shadow-lg">
-                  <div>Is двигатель работает = true</div>
-                  <div>Is дать мне права администратора = true</div>
-                  <div className="mt-1">
-                    Зарегистрируйся и получи админку через консоль.
-                  </div>
+                  {rebootReady && onManualReboot && (
+                    <button
+                      onClick={onManualReboot}
+                      className="mt-4 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-500"
+                    >
+                      ПЕРЕЗАПУСТИТЬСЯ
+                    </button>
+                  )}
                 </div>
               )}
 
               {!isBroken && (
-                <div className="bg-black text-green-400 font-mono p-4 rounded mb-4 h-24 flex items-center justify-center border border-green-500 shadow-lg">
+                <div className="mb-4 flex h-24 items-center justify-center rounded border border-green-500 bg-black p-4 font-mono text-green-400 shadow-lg">
                   Система работает штатно
                 </div>
               )}
 
               <div className="grid grid-cols-4 gap-2">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="bg-gray-600 h-8 rounded" />
+                  <div key={i} className="h-8 rounded bg-gray-600" />
                 ))}
               </div>
             </div>
@@ -334,3 +382,7 @@ export default function EnginePanel({
     </div>
   );
 }
+
+
+
+
