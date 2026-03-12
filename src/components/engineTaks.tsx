@@ -98,7 +98,7 @@ export default function EnginePanel({
   const [answer, setAnswer] = useState("");
   const [photoQuestionIndex, setPhotoQuestionIndex] = useState(0);
   const [photoAnsweredCount, setPhotoAnsweredCount] = useState(0);
-  const [photoCycleFailed, setPhotoCycleFailed] = useState(false);
+  const [photoFeedback, setPhotoFeedback] = useState("");
 
   const [reportedSolved, setReportedSolved] = useState(false);
 
@@ -119,7 +119,7 @@ export default function EnginePanel({
       setAnswer("");
       setPhotoQuestionIndex(0);
       setPhotoAnsweredCount(0);
-      setPhotoCycleFailed(false);
+      setPhotoFeedback("");
       setReportedSolved(false);
     }
   }, [isBroken, questionSet]);
@@ -128,6 +128,7 @@ export default function EnginePanel({
     if (!photoSolved) return;
     setLeftImagePanelOpen(false);
     setBottomAnswerPanelOpen(false);
+    setPhotoFeedback("");
   }, [photoSolved]);
 
   useEffect(() => {
@@ -163,28 +164,22 @@ export default function EnginePanel({
     const normalized = normalizeAnswer(answer);
     const ok = normalized === normalizeAnswer(activePhotoQuestion.answer);
     const nextIndex = photoQuestionIndex + 1;
-    const cycleWillFail = photoCycleFailed || !ok;
 
     if (!ok) {
       appendLog(
         `photo: ${questionSet} question ${photoQuestionIndex + 1} failed`,
       );
-      setPhotoCycleFailed(true);
-    } else {
-      setPhotoAnsweredCount((prev) => Math.min(prev + 1, totalPhotoQuestions));
+      setPhotoFeedback("Неверно. Исправь ответ, чтобы перейти к следующему вопросу.");
+      return;
     }
 
+    setPhotoFeedback("");
+    setPhotoAnsweredCount((prev) => Math.min(prev + 1, totalPhotoQuestions));
+
     if (nextIndex >= totalPhotoQuestions) {
-      if (!cycleWillFail) {
-        if (!photoSolved) {
-          onPhotoSolved();
-          appendLog(`photo: ${questionSet} answers accepted`);
-        }
-      } else {
-        appendLog(`photo: ${questionSet} cycle reset to first question`);
-        setPhotoQuestionIndex(0);
-        setPhotoAnsweredCount(0);
-        setPhotoCycleFailed(false);
+      if (!photoSolved) {
+        onPhotoSolved();
+        appendLog(`photo: ${questionSet} answers accepted`);
       }
     } else {
       setPhotoQuestionIndex(nextIndex);
@@ -350,6 +345,11 @@ export default function EnginePanel({
                       ? (activePhotoQuestion?.prompt ?? "Опиши, что происходит")
                       : "loading"}
                   </div>
+                  {questionVisible && photoFeedback && (
+                    <div className="text-center text-xs text-yellow-300">
+                      {photoFeedback}
+                    </div>
+                  )}
                   {questionVisible && questionSet === "meeting" && (
                     <div className="text-xs text-red-300">
                       Вопрос {photoQuestionIndex + 1} из {totalPhotoQuestions}
@@ -401,3 +401,4 @@ export default function EnginePanel({
     </div>
   );
 }
+
